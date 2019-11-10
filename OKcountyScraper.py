@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from tkinter import *
 from urllib.request import urlopen
 from urllib.request import Request
@@ -30,18 +28,16 @@ def fetch(entries):
 	      	url += field + "=" + text + ":"
 	      elif field == "county":
 	      	county = text
-	      	# Makes a CSV file named after the county of that's being scraped
+	      	# Makes a CSV file named after the county that's being scraped
 	      	makeCSV (text)
 	      	# URL here doesn't include page number. Will be added in scrape function
 	      	url +="site=" + text + "/page-"
-	      	print ("URL IS: " + url)
 	      	startScrapeThread (url, county)
-	      	# scrape (url, county)
 
 	  # If there is no text in the county box, throw an error.
       elif text == "" and field == "county":
-	      	messagebox.showerror ("NO County Entered", "Please enter a County and try agian.")
-   
+	      	messagebox.showwarning ("NO County Entered", "Please enter a County and try agian.")
+
 def makeform(root, fields):
    entries = []
    root.title ('OKcountyrecords Scraper')
@@ -70,6 +66,27 @@ def makeCSV (county):
 		messagebox.showerror ("Permission Error", "It looks like you have a file open with the same name as the one being saved.  Please close that file and try again.")
 		scrapeCanceled ()
 		return
+
+def grabCounties(url):
+    url = "https://okcountyrecords.com/site-list"
+    request = Request(url, headers = {'User-Agent' :\
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"})
+    uClient = urlopen (request)
+    page_html = uClient.read ()
+    uClient.close ()
+
+    pageSoup = soup (page_html, 'html.parser')
+    pageSoup = pageSoup.body.tbody
+
+    countyList = []
+
+    for tr in pageSoup.find_all('tr'):
+        county = str(tr.find('td').find('span'))
+        county = county[21:-14]
+        if (len (county) > 0):
+            countyList.append (county)
+
+    return countyList
 
 
 # writes data to CSV.
@@ -118,13 +135,14 @@ def scrape (baseURL, county):
 	startPage = 1
 
 	url = baseURL + "1"
+	print ("URL IS: " + url)
 	try:
 		request = Request(url, headers = {'User-Agent' :\
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"})
 		uClient = urlopen (request)
 		page_html = uClient.read ()
 		uClient.close ()
-	
+
 		pageSoup = soup (page_html, "html.parser")
 		pageSoup = pageSoup.body
 
@@ -198,7 +216,7 @@ def scrape (baseURL, county):
 					finalPage = soup (page_html, "html.parser")
 
 					print ("DEBUG:  I'm looking in tables for data")
-					print ("DEBUG") 
+					print ("DEBUG")
 
 					# find all data fields in the table that contains the desired data
 					tables = finalPage.find_all('table')
@@ -251,7 +269,7 @@ if __name__ == '__main__':
 	root.geometry ("400x300")
 	ents = makeform(root, fields)
 	root.bind('<Return>', (lambda event, e=ents: fetch(e)))
-	global b1 
+	global b1
 	b1 = Button(root, text='Scrape!',
 		command=(lambda e=ents: fetch(e)))
 	b1.pack(side=LEFT, padx=5, pady=5)
