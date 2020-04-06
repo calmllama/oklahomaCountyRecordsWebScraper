@@ -203,6 +203,7 @@ def scrape (baseURL):
             pageList = pageList.split("\n",7)[-2];
         except:
             QMessageBox.about (dlg, "Form Error", "Make sure you spelled everything correctly in the forms and try agian.")
+            sys.exit ()
         result = re.search("/page-(.*)<", str(pageList))
         almostThere = result.group(1)
         pageTotal = ""
@@ -238,11 +239,11 @@ def scrape (baseURL):
                 # for each result in the result page, go to that result and pull data
                 for i in pageTag:
                     print ("in pagetag for loop                              3")
-                    if cancelButtonFlag:
-                        print ("in cancelButtonFlag condition: should only be here if cancelButtonFlag == True                             4")
-                        scrapeCanceled ()
-                        sys.exit ()
-                    print ("after cancelButtonFlag condition                                         5")
+                    # if cancelButtonFlag:
+                    #     print ("in cancelButtonFlag condition: should only be here if cancelButtonFlag == True                             4")
+                    #     scrapeCanceled ()
+                    #     sys.exit ()
+                    # print ("after cancelButtonFlag condition                                         5")
 
                     i = i.a
                     i = str(i)
@@ -301,7 +302,7 @@ def scrape (baseURL):
                     # write the data to CSV
                     writeCSV (county, book, page, instrument, documentStamps, recordedOn, instrumentDate, url)
                     # delay so we don't overwhelm the web servers and get blocked or something
-                    sleep (5)
+                    sleep (2)
 
                 # increment page number to go to next page
                 workingPage += 1
@@ -350,7 +351,7 @@ def main ():
     grabCounties ()
     setConnects ()
     dlg.show()
-    app.exec()
+    app.exec_()
 
 if __name__ == "__main__":
     main ()
