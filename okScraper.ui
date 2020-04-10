@@ -344,16 +344,32 @@
        </property>
        <column>
         <property name="text">
-         <string>County</string>
+         <string notr="true">County</string>
+        </property>
+        <property name="toolTip">
+         <string notr="true"/>
+        </property>
+        <property name="whatsThis">
+         <string notr="true"/>
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
+          <pointsize>9</pointsize>
           <weight>75</weight>
           <bold>true</bold>
+          <underline>false</underline>
          </font>
         </property>
         <property name="textAlignment">
          <set>AlignCenter</set>
+        </property>
+        <property name="background">
+         <color>
+          <red>209</red>
+          <green>209</green>
+          <blue>209</blue>
+         </color>
         </property>
        </column>
        <column>
@@ -362,12 +378,20 @@
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
           <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>
         <property name="textAlignment">
          <set>AlignCenter</set>
+        </property>
+        <property name="background">
+         <color>
+          <red>209</red>
+          <green>209</green>
+          <blue>209</blue>
+         </color>
         </property>
        </column>
        <column>
@@ -376,12 +400,20 @@
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
           <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>
         <property name="textAlignment">
          <set>AlignCenter</set>
+        </property>
+        <property name="background">
+         <color>
+          <red>209</red>
+          <green>209</green>
+          <blue>209</blue>
+         </color>
         </property>
        </column>
        <column>
@@ -390,12 +422,20 @@
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
           <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>
         <property name="textAlignment">
          <set>AlignCenter</set>
+        </property>
+        <property name="background">
+         <color>
+          <red>209</red>
+          <green>209</green>
+          <blue>209</blue>
+         </color>
         </property>
        </column>
        <column>
@@ -404,12 +444,20 @@
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
           <weight>75</weight>
           <bold>true</bold>
          </font>
         </property>
         <property name="textAlignment">
          <set>AlignCenter</set>
+        </property>
+        <property name="background">
+         <color>
+          <red>209</red>
+          <green>209</green>
+          <blue>209</blue>
+         </color>
         </property>
        </column>
        <column>
@@ -418,6 +466,7 @@
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
           <weight>75</weight>
           <bold>true</bold>
          </font>
@@ -425,13 +474,21 @@
         <property name="textAlignment">
          <set>AlignCenter</set>
         </property>
+        <property name="background">
+         <color>
+          <red>209</red>
+          <green>209</green>
+          <blue>209</blue>
+         </color>
+        </property>
        </column>
        <column>
         <property name="text">
-         <string>Instrument Date</string>
+         <string>Instument Date</string>
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
           <weight>75</weight>
           <bold>true</bold>
          </font>
@@ -453,6 +510,7 @@
         </property>
         <property name="font">
          <font>
+          <family>Arial Black</family>
           <weight>75</weight>
           <bold>true</bold>
          </font>

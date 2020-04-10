@@ -6,12 +6,16 @@ from bs4 import BeautifulSoup as soup
 import re
 from urllib.error import HTTPError
 from urllib.error import URLError
+from time import sleep
+import threading
 
 app = QtWidgets.QApplication ([])
 dlg = uic.loadUi ("okScraper.ui")
 startCal = QtWidgets.QCalendarWidget ()
+startCal.setWindowFlags(QtCore.Qt.CustomizeWindowHint)
 startCal.setGridVisible (True)
 stopCal = QtWidgets.QCalendarWidget ()
+stopCal.setWindowFlags(QtCore.Qt.CustomizeWindowHint)
 stopCal.setGridVisible (True)
 startURL = "https://okcountyrecords.com"
 
@@ -56,7 +60,6 @@ def toggleButtons(setBool, clear=True):
     dlg.rangeComboBox.setEnabled(setBool)
     dlg.startDateButton.setEnabled(setBool)
     dlg.stopDateButton.setEnabled(setBool)
-    # dlg.scrapeButton.setEnabled(setBool)
 
 def setSearchParams ():
     county = dlg.countyComboBox.currentText ()
@@ -64,8 +67,6 @@ def setSearchParams ():
     township = dlg.townshipComboBox.currentText ()
     rangee = dlg.rangeComboBox.currentText ()
     section = dlg.sectionComboBox.currentText ()
-    # startTime = dlg.startDateButton.currentText ()
-    # endTime = dlg.stopDateButton.currentText ()
 
     if not instrument == "Instrument Type" or not township == "Township" or not section == "Section" or not rangee == "Range":
         dlg.scrapeButton.setEnabled (True)
@@ -151,6 +152,7 @@ def grabComboItems ():
 
 def openCal (title):
     toggleButtons (False, clear=False)
+    dlg.countyComboBox.setEnabled(False)
     if title == "Select Start Date":
         startCal.show()
         startCal.setWindowTitle(title)
@@ -160,6 +162,7 @@ def openCal (title):
 
 def closeCal(title):
     toggleButtons (True, clear=False)
+    dlg.countyComboBox.setEnabled(True)
     if title == "start":
         startCal.hide ()
         startDate = str (startCal.selectedDate ().toPyDate ())
@@ -169,7 +172,21 @@ def closeCal(title):
         stopDate = str (stopCal.selectedDate ().toPyDate ())
         dlg.stopDateButton.setText ("Stop: " + stopDate)
     
+def startScrapeThread(url, county):
+    # make url into a list of len=1 to pass into the thread
+    urList = [url]
+    global scrapeThread
+    scrapeThread = threading.Thread(target=scrape, args=(urList, county))
+    scrapeThread.daemon = True
+    scrapeThread.start()
+
+def stopScrapeThread ():
+    global cancelButtonFlag
+    cancelButtonFlag = True
+
 def setConnects ():
+    # grab county
+    county = dlg.countyComboBox.currentText()
     dlg.countyComboBox.currentIndexChanged.connect (grabComboItems)
     dlg.instrumentComboBox.currentIndexChanged.connect (setSearchParams)
     dlg.townshipComboBox.currentIndexChanged.connect (setSearchParams)
@@ -179,12 +196,15 @@ def setConnects ():
     dlg.stopDateButton.clicked.connect (lambda: openCal("Select Stop Date"))
     startCal.selectionChanged.connect (lambda: closeCal('start'))
     stopCal.selectionChanged.connect (lambda: closeCal('stop'))
-    dlg.scrapeButton.clicked.connect (lambda: scrape (startURL))
+    dlg.scrapeButton.clicked.connect (lambda: startScrapeThread (startURL, county))
 
-def scrape (baseURL):
-    global cancelButtonFlag
+def scrape (baseURL, county):
+    # Set buttons to the 'scraping state'
+    toggleButtons(False, clear=False)
+    dlg.countyComboBox.setEnabled(False)
+
     startPage = 1
-    baseURL = makeURL(baseURL)
+    baseURL = makeURL(baseURL[0])
     url = baseURL + "/page-1"
     try:
         request = Request(url, headers = {'User-Agent' :\
@@ -215,6 +235,7 @@ def scrape (baseURL):
                 break
         pageTotal = int(pageTotal) + 1
         workingPage = 1
+        dataTableEntryNumber = 1
 
         for page in range(1, pageTotal + 1):
             if page == 0:
@@ -222,29 +243,23 @@ def scrape (baseURL):
             else:
                 url = baseURL + "/page-" + str (workingPage)
 
-                print ("DEBUG:  I'm opening result url " + url)
-                print ("DEBUG")
+                # print ("DEBUG:  I'm opening result url " + url)
+                # print ("DEBUG")
 
                 request = Request(url, headers = {'User-Agent' :\
                     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"})
-                print ("1")
+                # print ("1")
                 uClient = urlopen (request)
                 page_html = uClient.read ()
                 uClient.close ()
-                print ("2")
+                # print ("2")
                 # find list of results on result page
                 pageTag = soup (page_html, "html.parser")
                 pageTag = pageTag.body.tbody
 
                 # for each result in the result page, go to that result and pull data
                 for i in pageTag:
-                    print ("in pagetag for loop                              3")
-                    # if cancelButtonFlag:
-                    #     print ("in cancelButtonFlag condition: should only be here if cancelButtonFlag == True                             4")
-                    #     scrapeCanceled ()
-                    #     sys.exit ()
-                    # print ("after cancelButtonFlag condition                                         5")
-
+                    # print ("in pagetag for loop                              3")
                     i = i.a
                     i = str(i)
 
@@ -253,8 +268,8 @@ def scrape (baseURL):
 
                     url = "https://okcountyrecords.com" + i
 
-                    print ("DEBUG:  I'm opening page url" + url)
-                    print ("DEBUG")
+                    # print ("DEBUG:  I'm opening page url" + url)
+                    # print ("DEBUG")
 
                     # Open next result from result page
                     request = Request(url, headers = {'User-Agent' :\
@@ -266,8 +281,8 @@ def scrape (baseURL):
                     # Program has reached the destination page for desired data
                     finalPage = soup (page_html, "html.parser")
 
-                    print ("DEBUG:  I'm looking in tables for data")
-                    print ("DEBUG")
+                    # print ("DEBUG:  I'm looking in tables for data")
+                    # print ("DEBUG")
 
                     # find all data fields in the table that contains the desired data
                     tables = finalPage.find_all('table')
@@ -280,29 +295,50 @@ def scrape (baseURL):
                     # TODO: Add better handling here.  could result in shifted CSV rows if any of these data are missing.
                     book = re.search(">(.*)</td>", str(tds[0]))
                     book = book.group (1)
+                    if book:
+                        currentRowCount = dlg.dataTable.rowCount() #necessary even when there are no rows in the table
+                        dlg.dataTable.insertRow(currentRowCount)
+                        dlg.dataTable.setItem(currentRowCount, 0, QTableWidgetItem(dlg.countyComboBox.currentText ()))
+                        dlg.dataTable.setItem(currentRowCount, 1, QTableWidgetItem(book))
 
                     page = re.search(">(.*)</td>", str(tds[1]))
                     page = page.group (1)
+                    if page:
+                        dlg.dataTable.setItem(currentRowCount, 2, QTableWidgetItem(page))
 
                     instrument = re.search("heavy\">(.*)</td>", str(tds[2]))
                     instrument = instrument.group (1)
+                    if instrument:
+                        dlg.dataTable.setItem(currentRowCount, 3, QTableWidgetItem(instrument))
 
                     documentStamps = re.search("<td>(.*)</td>", str(tds[6]))
                     documentStamps = documentStamps.group (1)
+                    if documentStamps:
+                        dlg.dataTable.setItem(currentRowCount, 4, QTableWidgetItem(documentStamps))
 
                     recordedOn = re.search ("<td>(.*)</td>", str(tds[7]))
                     recordedOn = recordedOn.group (1)
+                    if recordedOn:
+                        dlg.dataTable.setItem(currentRowCount, 5, QTableWidgetItem(recordedOn))
 
                     if len(tds) > 8:
                         instrumentDate = re.search ("<td>(.*)</td>", str(tds[8]))
                         instrumentDate = instrumentDate.group (1)
                     else:
                         instrumentDate = ""
+                    if instrumentDate:
+                        dlg.dataTable.setItem(currentRowCount, 6, QTableWidgetItem(instrumentDate))
+                        
+                        dlg.dataTable.setItem(currentRowCount, 7, QTableWidgetItem(url))
 
-                    # write the data to CSV
-                    writeCSV (county, book, page, instrument, documentStamps, recordedOn, instrumentDate, url)
                     # delay so we don't overwhelm the web servers and get blocked or something
-                    sleep (2)
+                    sleep (.5)
+
+                    # Set the scrape counter value
+                    dlg.rowCounter.display(dataTableEntryNumber)
+
+                    # Increment row number for data table
+                    dataTableEntryNumber += 1
 
                 # increment page number to go to next page
                 workingPage += 1
@@ -344,7 +380,7 @@ def makeURL (url):
         return "error"
     else:
         url += "site={}".format (dlg.countyComboBox.currentText ().replace (" ", "+"))
-        print (url)
+        # print (url)
         return url
 
 def main ():
