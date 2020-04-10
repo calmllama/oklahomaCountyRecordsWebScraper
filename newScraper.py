@@ -8,6 +8,7 @@ from urllib.error import HTTPError
 from urllib.error import URLError
 from time import sleep
 import threading
+import sys
 
 app = QtWidgets.QApplication ([])
 dlg = uic.loadUi ("okScraper.ui")
@@ -62,7 +63,6 @@ def toggleButtons(setBool, clear=True):
     dlg.stopDateButton.setEnabled(setBool)
 
 def setSearchParams ():
-    county = dlg.countyComboBox.currentText ()
     instrument = dlg.instrumentComboBox.currentText ()
     township = dlg.townshipComboBox.currentText ()
     rangee = dlg.rangeComboBox.currentText ()
@@ -202,11 +202,13 @@ def scrape (baseURL, county):
     # Set buttons to the 'scraping state'
     toggleButtons(False, clear=False)
     dlg.countyComboBox.setEnabled(False)
+    dlg.scrapeButton.setEnabled(False)
 
-    startPage = 1
+    # Create url from baseURL and data in combo boxes
     baseURL = makeURL(baseURL[0])
     url = baseURL + "/page-1"
     try:
+        # Pretend we're a web browser
         request = Request(url, headers = {'User-Agent' :\
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"})
         uClient = urlopen (request)
@@ -220,7 +222,7 @@ def scrape (baseURL, county):
         pagination = pageSoup.find ("nav", {"class":"pagination"})
         pageList = str(pagination)
         try:
-            pageList = pageList.split("\n",7)[-2];
+            pageList = pageList.split("\n",7)[-2]
         except:
             QMessageBox.about (dlg, "Form Error", "Make sure you spelled everything correctly in the forms and try agian.")
             sys.exit ()
@@ -234,32 +236,30 @@ def scrape (baseURL, county):
             else:
                 break
         pageTotal = int(pageTotal) + 1
+
+        # Initialize the working page numbers and data entry number
         workingPage = 1
         dataTableEntryNumber = 1
 
+        # For each page in the list of pages that we just pulled, go through
         for page in range(1, pageTotal + 1):
             if page == 0:
                 continue
             else:
                 url = baseURL + "/page-" + str (workingPage)
 
-                # print ("DEBUG:  I'm opening result url " + url)
-                # print ("DEBUG")
-
+                # Pretend we're a web browser and open the current page of results
                 request = Request(url, headers = {'User-Agent' :\
                     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"})
-                # print ("1")
                 uClient = urlopen (request)
                 page_html = uClient.read ()
                 uClient.close ()
-                # print ("2")
-                # find list of results on result page
+                
                 pageTag = soup (page_html, "html.parser")
                 pageTag = pageTag.body.tbody
 
                 # for each result in the result page, go to that result and pull data
                 for i in pageTag:
-                    # print ("in pagetag for loop                              3")
                     i = i.a
                     i = str(i)
 
@@ -268,10 +268,7 @@ def scrape (baseURL, county):
 
                     url = "https://okcountyrecords.com" + i
 
-                    # print ("DEBUG:  I'm opening page url" + url)
-                    # print ("DEBUG")
-
-                    # Open next result from result page
+                    # Pretend we're a web browser and open next result from result page
                     request = Request(url, headers = {'User-Agent' :\
                         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.0 Safari/537.36"})
                     uClient = urlopen (request)
@@ -280,9 +277,6 @@ def scrape (baseURL, county):
 
                     # Program has reached the destination page for desired data
                     finalPage = soup (page_html, "html.parser")
-
-                    # print ("DEBUG:  I'm looking in tables for data")
-                    # print ("DEBUG")
 
                     # find all data fields in the table that contains the desired data
                     tables = finalPage.find_all('table')
@@ -293,6 +287,8 @@ def scrape (baseURL, county):
                             tds += tbl.findChildren ('td')
 
                     # TODO: Add better handling here.  could result in shifted CSV rows if any of these data are missing.
+
+                    # Grab the book data and place it in the table along with the county
                     book = re.search(">(.*)</td>", str(tds[0]))
                     book = book.group (1)
                     if book:
@@ -301,26 +297,31 @@ def scrape (baseURL, county):
                         dlg.dataTable.setItem(currentRowCount, 0, QTableWidgetItem(dlg.countyComboBox.currentText ()))
                         dlg.dataTable.setItem(currentRowCount, 1, QTableWidgetItem(book))
 
+                    # Grab the page data and place it in the table
                     page = re.search(">(.*)</td>", str(tds[1]))
                     page = page.group (1)
                     if page:
                         dlg.dataTable.setItem(currentRowCount, 2, QTableWidgetItem(page))
 
+                    # Grab the instrument data and place it in the table
                     instrument = re.search("heavy\">(.*)</td>", str(tds[2]))
                     instrument = instrument.group (1)
                     if instrument:
                         dlg.dataTable.setItem(currentRowCount, 3, QTableWidgetItem(instrument))
 
+                    # Grab the document stamps data and place it in the table
                     documentStamps = re.search("<td>(.*)</td>", str(tds[6]))
                     documentStamps = documentStamps.group (1)
                     if documentStamps:
                         dlg.dataTable.setItem(currentRowCount, 4, QTableWidgetItem(documentStamps))
 
+                    # Grab the recorded on data and place it in the table
                     recordedOn = re.search ("<td>(.*)</td>", str(tds[7]))
                     recordedOn = recordedOn.group (1)
                     if recordedOn:
                         dlg.dataTable.setItem(currentRowCount, 5, QTableWidgetItem(recordedOn))
 
+                    # Grab the instrument date data and place it in the table
                     if len(tds) > 8:
                         instrumentDate = re.search ("<td>(.*)</td>", str(tds[8]))
                         instrumentDate = instrumentDate.group (1)
@@ -342,6 +343,7 @@ def scrape (baseURL, county):
 
                 # increment page number to go to next page
                 workingPage += 1
+                
     except HTTPError:
         QMessageBox.about (dlg, "Http Error", "Cannot access okcountyrecords.com.  Check your network connection and try again.")
     except URLError:
